@@ -67,12 +67,12 @@ FITS(view_t, NVNtextureView);
 // Sampler parameters (one copy shared by builder and object)
 // aniso (1..16) and lod_snap (in 1/255) take a byte each so that eight bytes and the parameters fit NVNsampler's 0x30.
 typedef struct { uint8_t minf, magf, ws, wt, wr, cmp_mode, cmp_func, reduction; float lod_min, lod_max, lod_bias, border[4]; uint8_t aniso, lod_snap; uint16_t pad; } samp_par;   // TOTK: lod_snap stored for queries (Metal has no equivalent)   // Enum values are all < 256
-// The parameters sit at offset 8 of both the builder and the sampler. In NVN the sampler is the leading part of its
+// The parameters sit at offset 8 of both the builder and the sampler: after the builder's device pointer, which game
+// code reads from the builder directly, and after the sampler's magic. In NVN the sampler is the leading part of its
 // builder, and a game may treat one as the other: an engine's sampler cache can keep copies of NVNsamplerBuilder,
 // register those copies as samplers, hash their bytes from offset 8 on and confirm a match with nvnSamplerCompare on
-// two copies. That only works when both types keep the parameters at the same offset, and with the filters inside the
-// hashed range.
-typedef struct { uint64_t head; samp_par p; NVNdevice *dev; } samp_builder_t;                 FITS(samp_builder_t, NVNsamplerBuilder);
+// two copies. That only works when both types keep the parameters at the same offset, inside the hashed range.
+typedef struct { NVNdevice *dev; samp_par p; } samp_builder_t;                                FITS(samp_builder_t, NVNsamplerBuilder);
 typedef struct { uint32_t magic, head; samp_par p; } samp_t;                                  FITS(samp_t, NVNsampler);
 _Static_assert(sizeof(samp_par) == 40, "TOTK sampler parameters");
 _Static_assert(offsetof(samp_builder_t, p) == 8 && offsetof(samp_t, p) == 8, "sampler parameters at offset 8");
