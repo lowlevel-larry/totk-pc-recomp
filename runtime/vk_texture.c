@@ -1686,7 +1686,7 @@ static VkSampler make_sampler(VkCtx *c, const samp_par *d) {
     // samplers, nearest or unmipmapped ones (data maps, LUTs) and clamped ones keep the game's level: clamped samplers
     // read screen-sized buffers, whose coordinates can stretch steeply at an object's edge, where anisotropic taps reach
     // across it and leave a speckled fringe (the inventory's character preview).
-    float aniso = d->aniso;
+    float aniso = (float)d->aniso;
     // The game's own wrap modes: a mirror-clamp one maps to MIRRORED_REPEAT where the device lacks mirror-clamp-to-edge.
     int tiled = (d->ws == NVN_WRAP_MODE_REPEAT || d->ws == NVN_WRAP_MODE_MIRRORED_REPEAT) &&
                 (d->wt == NVN_WRAP_MODE_REPEAT || d->wt == NVN_WRAP_MODE_MIRRORED_REPEAT);

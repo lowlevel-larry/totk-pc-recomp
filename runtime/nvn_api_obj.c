@@ -333,11 +333,13 @@ NVN_API(nvnTextureInvalidateTexels) { (void)c; }
 
 // ---------- Samplers
 #define SB(c) (&((samp_builder_t *)arg_p(c, 0))->p)
-// void nvnSamplerBuilderSetDefaults(NVNsamplerBuilder *b): keeps the device; GL defaults
+// void nvnSamplerBuilderSetDefaults(NVNsamplerBuilder *b): keeps the device; GL defaults. The whole 0x60-byte builder
+// is cleared, as NVN does, not only the part samp_builder_t uses: a game may hash or compare the builder's bytes
+// (nvn_obj.h samp_builder_t), and stack garbage past our fields made identical samplers differ.
 NVN_API(nvnSamplerBuilderSetDefaults) {
     samp_builder_t *b = arg_p(c, 0);
     NVNdevice *dev = b->dev;
-    memset(b, 0, sizeof *b);
+    memset(b, 0, sizeof(NVNsamplerBuilder));
     b->dev = dev;
     samp_par *o = &b->p;
     o->minf = NVN_MIN_FILTER_NEAREST_MIPMAP_LINEAR;
@@ -346,7 +348,7 @@ NVN_API(nvnSamplerBuilderSetDefaults) {
     o->cmp_func = NVN_COMPARE_FUNC_LESS;
     o->lod_min = -1000.f;
     o->lod_max = 1000.f;
-    o->aniso = 1.f;
+    o->aniso = 1;
 }
 NVN_API(nvnSamplerBuilderSetDevice) { ((samp_builder_t *)arg_p(c, 0))->dev = arg_p(c, 1); }
 NVN_API(nvnSamplerBuilderSetMinMagFilter) {
@@ -373,8 +375,14 @@ NVN_API(nvnSamplerBuilderSetCompare) {
     p->cmp_func = (uint8_t)arg_x(c, 2);
 }
 NVN_API(nvnSamplerBuilderSetBorderColor) { memcpy(SB(c)->border, arg_p(c, 1), 16); }
-NVN_API(nvnSamplerBuilderSetMaxAnisotropy) { SB(c)->aniso = arg_s(c, 0); }
-NVN_API(nvnSamplerBuilderSetLodSnap) { SB(c)->lod_snap = arg_s(c, 0); }   // stored for queries; no host equivalent
+NVN_API(nvnSamplerBuilderSetMaxAnisotropy) {
+    float a = arg_s(c, 0);
+    SB(c)->aniso = (uint8_t)(a >= 16.f ? 16 : a > 1.f ? (int)(a + 0.5f) : 1);
+}
+NVN_API(nvnSamplerBuilderSetLodSnap) {   // stored for queries in 1/255; no host equivalent
+    float v = arg_s(c, 0);
+    SB(c)->lod_snap = (uint8_t)(v <= 0.f ? 0 : v >= 1.f ? 255 : (int)(v * 255.f + 0.5f));
+}
 // void nvnSamplerBuilderGetMinMagFilter(const NVNsamplerBuilder *b, NVNminFilter *min, NVNmagFilter *mag)
 NVN_API(nvnSamplerBuilderGetMinMagFilter) {
     const samp_par *p = SB(c);
